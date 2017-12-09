@@ -175,11 +175,12 @@ class StartPage(tk.Frame):
 
         self.selected_colour = "Red"
         self.colors = {
-                       "Red"  : ("#ff0000", "RED1"),
-                       "Green": ("#00ff00", "LGRE"),
-                       "Blue" : ("#2659f2", "WBLU"),
-                       "Brown": ("#9b6700", "BRWN"),
-                       "Black": ("#000000", "BLCK")
+                       "Red"        : ("#ff0000", "RED1"),
+                       "Green"      : ("#00ff00", "LGRE"),
+                       "Dark Green" : ("#008c00", "DGRE"),
+                       "Blue"       : ("#2659f2", "WBLU"),
+                       "Brown"      : ("#824900", "BRWN"),
+                       "Black"      : ("#000000", "BLCK")
                        }
         self.internal_colors = {
                                 "NONE":"#ffffff",
@@ -187,7 +188,8 @@ class StartPage(tk.Frame):
                                 "LGRE":"#00ff00",
                                 "WBLU":"#2659f2",
                                 "BRWN":"#9b6700",
-                                "BLCK":"#000000"
+                                "BLCK":"#000000",
+                                "DGRE":"#008c00"
                                 }
 
         default_color = tk.StringVar(self)
