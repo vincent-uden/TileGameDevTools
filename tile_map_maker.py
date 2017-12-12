@@ -1,12 +1,15 @@
 import tkinter as tk
 import os
+from PIL import ImageTk, Image
 from tkinter import ttk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 
 LARGE_FONT = ("Verdana", 12)
 SMALL_FONT = ("Verdana", 9)
 
 tiles = []
+tile_set = {}
+tile_imgs = {}
 
 mouse_pressed = False
 def set_dimensions(x, y, c):
@@ -41,7 +44,6 @@ def export_input(box1, box2, frame):
         frame.destroy()
     except ValueError:
         pass
-
 
 def new_map_popup():
     win = tk.Toplevel(padx=20, pady=20)
@@ -108,7 +110,7 @@ def open_map(frame):
     try:
         input_map = open(name)
     except:
-        return
+        raise IOError
     data = input_map.read()
     input_map.close()
     data = data.split("\n")[:-1]
@@ -118,6 +120,22 @@ def open_map(frame):
     for row in data:
         tiles.append(row.split(" "))
     frame.render_tiles()
+
+def import_tile_set(frame):
+    # TODO: Change images to pillow images so they can be rotated
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    directory = askdirectory(title="Choose a the directory of the tile set")
+    for filename in os.listdir(directory):
+        if filename.endswith(".png"):
+            base_name = filename.split(".")[0]
+            img = Image.open(directory + "/" + filename)
+            tile_set[base_name] = ImageTk.PhotoImage(img)
+            tile_imgs[base_name] = img
+    frame.canvas.create_image(0,0, image=tile_set["simple_grass"])
+    frame.update_color_menu()
+
+def get_tile(tile):
+    return tile_set[tile]
 
 # This class will be root frame
 class TileMapCreator(tk.Tk):
@@ -144,6 +162,7 @@ class TileMapCreator(tk.Tk):
         file_menu.add_command(label="New Map", command=new_map_popup)
         file_menu.add_command(label="Save", command=save_map1)
         file_menu.add_command(label="Open", command=lambda:open_map(self.frames[StartPage]))
+        file_menu.add_command(label="Import Tile Set", command=lambda:import_tile_set(self.frames[StartPage]))
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
@@ -167,7 +186,7 @@ class StartPage(tk.Frame):
         self.canvas.grid(column=0, row=0)
         set_dimensions(40, 40, self.canvas)
 
-        self.selected_tool = self.draw
+        self.selected_tool = self.draw_event_pp
         self.selected_size = 1
 
         self.canvas.bind("<Button-1>", self.selected_tool)
@@ -192,8 +211,8 @@ class StartPage(tk.Frame):
                                 "DGRE":"#008c00"
                                 }
 
-        default_color = tk.StringVar(self)
-        default_color.set("Red")
+        self.default_color = tk.StringVar(self)
+        self.default_color.set("Red")
 
         # Scroll bars
         hbar = tk.Scrollbar(left_frame, orient=tk.HORIZONTAL)
@@ -207,8 +226,10 @@ class StartPage(tk.Frame):
         right_frame = tk.Frame(self)
         right_frame.grid(column=2, row=0, sticky="N")
 
-        color_menu = tk.OptionMenu(right_frame, default_color, *list(self.colors.keys()), command=self.select_material)
-        color_menu.grid(column=0, row=0, sticky="EW")
+        self.color_menu = tk.OptionMenu(right_frame, self.default_color, *list(self.colors.keys()), command=self.select_material)
+        self.color_menu.grid(column=0, row=0, sticky="EW")
+
+        self.selected_tile = None
 
         # Tools
         size_label = tk.Label(right_frame, text="Brush size", font=SMALL_FONT)
@@ -220,34 +241,56 @@ class StartPage(tk.Frame):
         self.brush_size.grid(row=2)
 
         brush_tool = ttk.Button(right_frame, text="Draw",
-                                command=lambda:self.select_tool(self.draw))
+                                command=lambda:self.select_tool(self.draw_event_pp))
         brush_tool.grid(row=3)
 
         erase_tool = ttk.Button(right_frame, text="Erase",
-                                command=lambda:self.select_tool(self.erase))
+                                command=lambda:self.select_tool(self.erase_event_pp))
         erase_tool.grid(row=4)
 
         self.grid_propagate(0)
         self.configure(height=850, width=920)
         left_frame.grid_propagate(0)
         left_frame.configure(height=850, width=800)
+    
+    def update_color_menu(self):
+        self.default_color.set("")
+        self.color_menu["menu"].delete(0, "end")
 
-    def draw(self, event):
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
+        for choice in tile_set.keys():
+            self.color_menu["menu"].add_command(label=choice, command=lambda v=choice: self.select_tile(v))
+
+    def draw_event_pp(self, event):
+        x = int(self.canvas.canvasx(event.x))
+        y = int(self.canvas.canvasy(event.y))
+        self.draw(x, y)
+
+    def draw(self, x, y):
         x = int(x // 20 * 20)
         y = int(y // 20 * 20)
-        self.canvas.create_rectangle(x, y, x + self.selected_size * 20, y + self.selected_size * 20, fill=self.colors[self.selected_colour], width=0)
-        for ix in range(self.selected_size):
-            for iy in range(self.selected_size):
-                try:
-                    tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = self.colors[self.selected_colour][1]
-                except:
-                    pass
-    
-    def erase(self, event):
+        if self.selected_colour != None:
+            self.canvas.create_rectangle(x, y, x + self.selected_size * 20, y + self.selected_size * 20, fill=self.colors[self.selected_colour], width=0)
+            for ix in range(self.selected_size):
+                for iy in range(self.selected_size):
+                    try:
+                        tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = self.colors[self.selected_colour][1]
+                    except:
+                        pass
+        else:
+            self.canvas.create_image(x + 10, y + 10, image=get_tile(self.selected_tile))
+            for ix in range(self.selected_size):
+                for iy in range(self.selected_size):
+                    try:
+                        tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = self.selected_tile
+                    except:
+                        pass
+
+    def erase_event_pp(self, event):
         x = int(self.canvas.canvasx(event.x))
-        y = int(self.canvas.canvasy(event.y)) 
+        y = int(self.canvas.canvasy(event.y))
+        self.erase(x, y)
+
+    def erase(self, x, y):
         x = x // 20 * 20
         y = y // 20 * 20
         self.canvas.create_rectangle(x, y, x + self.selected_size * 20, y + self.selected_size * 20, fill="white", width=0)
@@ -263,10 +306,20 @@ class StartPage(tk.Frame):
         y_dim = len(tiles[0])
         for y, row in enumerate(tiles):
             for x, item in enumerate(row):
-                self.canvas.create_rectangle(x * 20, y * 20, (x + self.selected_size) * 20, (y + self.selected_size) * 20, fill=self.internal_colors[item], width=0)
+                if item in list(self.internal_colors.keys()):
+                    self.canvas.create_rectangle(x * 20, y * 20, (x + self.selected_size) * 20, (y + self.selected_size) * 20, fill=self.internal_colors[item], width=0)
+                elif item in list(tile_set):
+                    self.select_tile(item)
+                    self.draw(x * 20, y * 20)
 
     def select_material(self, mat):
         self.selected_colour = mat
+        self.selected_tile = None
+    
+    def select_tile(self, tile):
+        self.selected_tile = tile
+        self.selected_colour = None
+        self.default_color = tile
 
     def select_tool(self, tool):
         self.selected_tool = tool
