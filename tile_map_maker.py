@@ -1,5 +1,6 @@
 import tkinter as tk
 import os
+from math import pi
 from PIL import ImageTk, Image
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
@@ -9,7 +10,7 @@ SMALL_FONT = ("Verdana", 9)
 
 tiles = []
 tile_set = {}
-tile_imgs = {}
+tile_rotations = {}
 
 mouse_pressed = False
 def set_dimensions(x, y, c):
@@ -105,6 +106,7 @@ def save_map1():
     file.close()
 
 def open_map(frame):
+    # TODO: Open maps with rotated tiles
     current_path = os.path.dirname(os.path.abspath(__file__))
     name = askopenfilename(initialdir=current_path, filetypes=(("Map files", "*.txt"), ("All files", "*.*")), title="Choose a file")
     try:
@@ -122,20 +124,29 @@ def open_map(frame):
     frame.render_tiles()
 
 def import_tile_set(frame):
-    # TODO: Change images to pillow images so they can be rotated
     current_path = os.path.dirname(os.path.abspath(__file__))
     directory = askdirectory(title="Choose a the directory of the tile set")
     for filename in os.listdir(directory):
         if filename.endswith(".png"):
             base_name = filename.split(".")[0]
             img = Image.open(directory + "/" + filename)
-            tile_set[base_name] = ImageTk.PhotoImage(img)
-            tile_imgs[base_name] = img
-    frame.canvas.create_image(0,0, image=tile_set["simple_grass"])
+            #                      Image             ,   rot_angle
+            tile_set[base_name] = []
+            for i in range(4):
+                rotated_img = img.rotate(i * 90)
+                new_img = ImageTk.PhotoImage(rotated_img)
+                tile_set[base_name].append(new_img)
+            tile_rotations[base_name] = 0
     frame.update_color_menu()
 
 def get_tile(tile):
-    return tile_set[tile]
+    return tile_set[tile][tile_rotations[tile]]
+
+def rotate_tile(tile, angle):
+    tile_rotations[tile] = (tile_rotations[tile] + angle) % 4
+
+def rotate_tile_abs(tile, angle):
+    tile_rotations[tile] = angle
 
 # This class will be root frame
 class TileMapCreator(tk.Tk):
@@ -157,7 +168,6 @@ class TileMapCreator(tk.Tk):
         self.show_frame(StartPage)
 
         menu_bar = tk.Menu(self)
-        # TODO: Add open(load) functionality
         file_menu = tk.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="New Map", command=new_map_popup)
         file_menu.add_command(label="Save", command=save_map1)
@@ -248,6 +258,13 @@ class StartPage(tk.Frame):
                                 command=lambda:self.select_tool(self.erase_event_pp))
         erase_tool.grid(row=4)
 
+        rot_label = tk.Label(right_frame, text="Rotate Texture", font=SMALL_FONT)
+        rot_label.grid(row=5)
+        rot_clockwise  = ttk.Button(right_frame, text=" 90°", command=lambda:rotate_tile(self.selected_tile, 1))
+        rot_countclock = ttk.Button(right_frame, text="-90°", command=lambda:rotate_tile(self.selected_tile, -1))
+        rot_clockwise.grid(row=6)
+        rot_countclock.grid(row=7)
+
         self.grid_propagate(0)
         self.configure(height=850, width=920)
         left_frame.grid_propagate(0)
@@ -281,7 +298,7 @@ class StartPage(tk.Frame):
             for ix in range(self.selected_size):
                 for iy in range(self.selected_size):
                     try:
-                        tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = self.selected_tile
+                        tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = str(tile_rotations[self.selected_tile]) + self.selected_tile
                     except:
                         pass
 
@@ -308,8 +325,9 @@ class StartPage(tk.Frame):
             for x, item in enumerate(row):
                 if item in list(self.internal_colors.keys()):
                     self.canvas.create_rectangle(x * 20, y * 20, (x + self.selected_size) * 20, (y + self.selected_size) * 20, fill=self.internal_colors[item], width=0)
-                elif item in list(tile_set):
-                    self.select_tile(item)
+                elif item[1::] in list(tile_set):
+                    self.select_tile(item[1::])
+                    rotate_tile_abs(item[1::], int(item[0]))
                     self.draw(x * 20, y * 20)
 
     def select_material(self, mat):
