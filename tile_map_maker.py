@@ -193,21 +193,22 @@ class TileMapCreator(tk.Tk):
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-
+        # Setting up drawing and tool frames
         left_frame = tk.Frame(self)
         left_frame.grid(column=0, row=0, sticky="NW")
-
-
+        right_frame = tk.Frame(self)
+        right_frame.grid(column=2, row=0, sticky="N")
+        # Creating canvas for drawing
         self.canvas = tk.Canvas(left_frame, background="white", scrollregion=(0,0,800,800))
         self.canvas.grid(column=0, row=0)
         set_dimensions(60, 60, self.canvas)
-
+        # Setting drawing to the first default tool and 1 to default size
         self.selected_tool = self.draw_event_pp
         self.selected_size = 1
-
+        # Binding left click to drawing
         self.canvas.bind("<Button-1>", self.selected_tool)
         self.canvas.bind("<B1-Motion>", self.selected_tool)
-
+        # Colors for the default menu
         self.selected_colour = "Red"
         self.colors = {
                        "Red"        : ("#ff0000", "RED1"),
@@ -229,10 +230,6 @@ class StartPage(tk.Frame):
 
         self.default_color = tk.StringVar(self)
         self.default_color.set("Red")
-
-        right_frame = tk.Frame(self)
-        right_frame.grid(column=2, row=0, sticky="N")
-
         # Scroll bars
         self.hbar = tk.Scrollbar(left_frame, orient=tk.HORIZONTAL)
         self.hbar.grid(column=0, row=1, sticky="WE")
@@ -241,23 +238,19 @@ class StartPage(tk.Frame):
         self.vbar.grid(column=1, row=0, sticky="NS")
         self.vbar.config(command=self.canvas.yview)
         self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
-
-        
-
+        # Creating menu for tiles/colors
         self.color_menu = tk.OptionMenu(right_frame, self.default_color, *list(self.colors.keys()), command=self.select_material)
         self.color_menu.grid(column=0, row=0, sticky="EW")
-
         self.selected_tile = None
-
         # Tools
         size_label = tk.Label(right_frame, text="Brush size", font=SMALL_FONT)
         size_label.grid(row=1)
-
+        # Size selector
         default_size = tk.IntVar(self)
         default_size.set(1)
         self.brush_size = tk.Scale(right_frame, from_=1, to=15, orient=tk.HORIZONTAL, variable=default_size, command=self.select_size)
         self.brush_size.grid(row=2)
-
+        # Tools
         brush_tool = ttk.Button(right_frame, text="Draw",
                                 command=lambda:self.select_tool(self.draw_event_pp))
         brush_tool.grid(row=3)
@@ -265,14 +258,14 @@ class StartPage(tk.Frame):
         erase_tool = ttk.Button(right_frame, text="Erase",
                                 command=lambda:self.select_tool(self.erase_event_pp))
         erase_tool.grid(row=4)
-
+        # Rotation control
         rot_label = tk.Label(right_frame, text="Rotate Texture", font=SMALL_FONT)
         rot_label.grid(row=5)
         rot_clockwise  = ttk.Button(right_frame, text=" 90°", command=lambda:rotate_tile(self.selected_tile, 1))
         rot_countclock = ttk.Button(right_frame, text="-90°", command=lambda:rotate_tile(self.selected_tile, -1))
         rot_clockwise.grid(row=6)
         rot_countclock.grid(row=7)
-
+        # Making window static
         self.grid_propagate(0)
         self.configure(height=850, width=950)
         left_frame.grid_propagate(0)
