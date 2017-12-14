@@ -294,9 +294,9 @@ class StartPage(tk.Frame):
                     except:
                         pass
         else:
-            self.canvas.create_image(x + 10, y + 10, image=get_tile(self.selected_tile))
             for ix in range(self.selected_size):
                 for iy in range(self.selected_size):
+                    self.canvas.create_image(x + ix * 20 + 10, y + iy * 20 + 10, image=get_tile(self.selected_tile))
                     try:
                         tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = str(tile_rotations[self.selected_tile]) + self.selected_tile
                     except:
@@ -320,7 +320,8 @@ class StartPage(tk.Frame):
 
     def render_tiles(self):
         y_dim = len(tiles)
-        y_dim = len(tiles[0])
+        x_dim = len(tiles[0])
+        self.canvas.config(width=x_dim * 20, height=y_dim * 20)
         for y, row in enumerate(tiles):
             for x, item in enumerate(row):
                 if item in list(self.internal_colors.keys()):
