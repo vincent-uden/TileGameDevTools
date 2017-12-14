@@ -253,12 +253,9 @@ class StartPage(tk.Frame):
         self.brush_size = tk.Scale(right_frame, from_=1, to=15, orient=tk.HORIZONTAL, variable=default_size, command=self.select_size)
         self.brush_size.grid(row=2)
         # Tools
-        brush_tool = ttk.Button(right_frame, text="Draw",
-                                command=lambda:self.select_tool(self.draw_event_pp))
+        brush_tool = ttk.Button(right_frame, text="Draw", command=lambda:self.select_tool(self.draw_event_pp))
         brush_tool.grid(row=3)
-
-        erase_tool = ttk.Button(right_frame, text="Erase",
-                                command=lambda:self.select_tool(self.erase_event_pp))
+        erase_tool = ttk.Button(right_frame, text="Erase", command=lambda:self.select_tool(self.erase_event_pp))
         erase_tool.grid(row=4)
         # Rotation control
         rot_label = tk.Label(right_frame, text="Rotate Texture", font=SMALL_FONT)
@@ -302,6 +299,8 @@ class StartPage(tk.Frame):
     def draw_event_pp(self, event):
         x = int(self.canvas.canvasx(event.x))
         y = int(self.canvas.canvasy(event.y))
+        if x < 0 or y < 0:
+            return
         self.draw(x, y)
 
     def draw(self, x, y):
@@ -318,11 +317,15 @@ class StartPage(tk.Frame):
         else:
             for ix in range(self.selected_size):
                 for iy in range(self.selected_size):
-                    self.canvas.create_image(x + ix * 20 + 10, y + iy * 20 + 10, image=get_tile(self.selected_tile))
                     try:
-                        tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = str(tile_rotations[self.selected_tile]) + self.selected_tile
+                        if tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] != str(tile_rotations[self.selected_tile]) + self.selected_tile:
+                            self.canvas.create_image(x + ix * 20 + 10, y + iy * 20 + 10, image=get_tile(self.selected_tile))
+                            try:
+                                tiles[(y + iy * 20) // 20][(x + ix * 20) // 20] = str(tile_rotations[self.selected_tile]) + self.selected_tile
+                            except:
+                                pass
                     except:
-                        pass
+                        print("HEY")
 
     def erase_event_pp(self, event):
         x = int(self.canvas.canvasx(event.x))
