@@ -150,9 +150,11 @@ def get_tile(tile):
 
 def rotate_tile(tile, angle):
     tile_rotations[tile] = (tile_rotations[tile] + angle) % 4
+    app.frames[StartPage].display_current_texture()
 
 def rotate_tile_abs(tile, angle):
     tile_rotations[tile] = angle
+    app.frames[StartPage].display_current_texture()
 
 # This class will be root frame
 class TileMapCreator(tk.Tk):
@@ -201,7 +203,7 @@ class StartPage(tk.Frame):
         # Creating canvas for drawing
         self.canvas = tk.Canvas(left_frame, background="white", scrollregion=(0,0,800,800))
         self.canvas.grid(column=0, row=0)
-        set_dimensions(60, 60, self.canvas)
+        set_dimensions(40, 40, self.canvas)
         # Setting drawing to the first default tool and 1 to default size
         self.selected_tool = self.draw_event_pp
         self.selected_size = 1
@@ -261,16 +263,24 @@ class StartPage(tk.Frame):
         # Rotation control
         rot_label = tk.Label(right_frame, text="Rotate Texture", font=SMALL_FONT)
         rot_label.grid(row=5)
-        rot_clockwise  = ttk.Button(right_frame, text=" 90°", command=lambda:rotate_tile(self.selected_tile, 1))
-        rot_countclock = ttk.Button(right_frame, text="-90°", command=lambda:rotate_tile(self.selected_tile, -1))
+        rot_clockwise  = ttk.Button(right_frame, text=" 90°", command=lambda:rotate_tile(self.selected_tile, -1))
+        rot_countclock = ttk.Button(right_frame, text="-90°", command=lambda:rotate_tile(self.selected_tile, 1))
         rot_clockwise.grid(row=6)
         rot_countclock.grid(row=7)
+        # Current texture window
+        current_label = tk.Label(right_frame, text="Selected Tile", font=SMALL_FONT)
+        current_label.grid(row=8)
+        self.current_texture = tk.Canvas(right_frame, background="white", width=40, height=40)
+        self.current_texture.grid(row=9)
         # Making window static
         self.grid_propagate(0)
         self.configure(height=850, width=950)
         left_frame.grid_propagate(0)
         left_frame.configure(height=850, width=800)
     
+    def display_current_texture(self):
+        self.current_texture.create_image(22, 22, image=get_tile(self.selected_tile))
+
     def set_canvas_dim(self, x, y):
         self.canvas.config(scrollregion=(0, 0, x*20, y*20))
         if x >= 40:
@@ -351,6 +361,7 @@ class StartPage(tk.Frame):
         self.selected_tile = tile
         self.selected_colour = None
         self.default_color = tile
+        self.display_current_texture()
 
     def select_tool(self, tool):
         self.selected_tool = tool
