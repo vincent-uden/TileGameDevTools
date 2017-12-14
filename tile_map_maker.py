@@ -24,12 +24,13 @@ def set_dimensions(x, y, c):
         tiles.pop()
     for y1 in range(y):
         tiles.append(["NONE" for x1 in range(x)])
-    c.config(scrollregion=(0,0,x*20,y*20))
-    if x > 40:
+    c.config(scrollregion=(0, 0, x*20, y*20))
+    print(x, y)
+    if x >= 40:
         c.config(width=800)
     else:
         c.config(width=x*20)
-    if y > 40:
+    if y >= 40:
         c.config(height=800)
     else:
         c.config(height=y*20)
@@ -40,13 +41,19 @@ def export_input(box1, box2, frame):
     try:
         x = int(inp1)
         y = int(inp2)
-        set_dimensions(x, y, app.frames[StartPage].canvas)
+        app.frames[StartPage].set_canvas_dim(x, y)
+        while tiles != []:
+            tiles.pop()
+        for y1 in range(y):
+            tiles.append(["NONE" for x1 in range(x)])
+
         app.frames[StartPage].render_tiles()
         frame.destroy()
     except ValueError:
         pass
 
 def new_map_popup():
+    # TODO: Fix, doesnt resize properly
     win = tk.Toplevel(padx=20, pady=20)
     win.wm_title("New Map")
 
@@ -106,7 +113,6 @@ def save_map1():
     file.close()
 
 def open_map(frame):
-    # TODO: Open maps with rotated tiles
     current_path = os.path.dirname(os.path.abspath(__file__))
     name = askopenfilename(initialdir=current_path, filetypes=(("Map files", "*.txt"), ("All files", "*.*")), title="Choose a file")
     try:
@@ -192,9 +198,9 @@ class StartPage(tk.Frame):
         left_frame.grid(column=0, row=0, sticky="NW")
 
 
-        self.canvas = tk.Canvas(left_frame, width=800, height=800, background="white", scrollregion=(0,0,800,800))
+        self.canvas = tk.Canvas(left_frame, background="white", scrollregion=(0,0,800,800))
         self.canvas.grid(column=0, row=0)
-        set_dimensions(40, 40, self.canvas)
+        set_dimensions(60, 60, self.canvas)
 
         self.selected_tool = self.draw_event_pp
         self.selected_size = 1
@@ -224,17 +230,19 @@ class StartPage(tk.Frame):
         self.default_color = tk.StringVar(self)
         self.default_color.set("Red")
 
-        # Scroll bars
-        hbar = tk.Scrollbar(left_frame, orient=tk.HORIZONTAL)
-        hbar.grid(column=0, row=1, sticky="WE")
-        hbar.config(command=self.canvas.xview)
-        vbar = tk.Scrollbar(self, orient=tk.VERTICAL)
-        vbar.grid(column=1, row=0, sticky="NS")
-        vbar.config(command=self.canvas.yview)
-        self.canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
-
         right_frame = tk.Frame(self)
         right_frame.grid(column=2, row=0, sticky="N")
+
+        # Scroll bars
+        self.hbar = tk.Scrollbar(left_frame, orient=tk.HORIZONTAL)
+        self.hbar.grid(column=0, row=1, sticky="WE")
+        self.hbar.config(command=self.canvas.xview)
+        self.vbar = tk.Scrollbar(self, orient=tk.VERTICAL)
+        self.vbar.grid(column=1, row=0, sticky="NS")
+        self.vbar.config(command=self.canvas.yview)
+        self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
+
+        
 
         self.color_menu = tk.OptionMenu(right_frame, self.default_color, *list(self.colors.keys()), command=self.select_material)
         self.color_menu.grid(column=0, row=0, sticky="EW")
@@ -266,10 +274,21 @@ class StartPage(tk.Frame):
         rot_countclock.grid(row=7)
 
         self.grid_propagate(0)
-        self.configure(height=850, width=920)
+        self.configure(height=850, width=950)
         left_frame.grid_propagate(0)
         left_frame.configure(height=850, width=800)
     
+    def set_canvas_dim(self, x, y):
+        self.canvas.config(scrollregion=(0, 0, x*20, y*20))
+        if x >= 40:
+            self.canvas.config(width=800)
+        else:
+            self.canvas.config(width=x*20)
+        if y >= 40:
+            self.canvas.config(height=800)
+        else:
+            self.canvas.config(height=y*20)
+        
     def update_color_menu(self):
         self.default_color.set("")
         self.color_menu["menu"].delete(0, "end")
@@ -321,7 +340,7 @@ class StartPage(tk.Frame):
     def render_tiles(self):
         y_dim = len(tiles)
         x_dim = len(tiles[0])
-        self.canvas.config(width=x_dim * 20, height=y_dim * 20)
+        self.set_canvas_dim(x_dim, y_dim)
         for y, row in enumerate(tiles):
             for x, item in enumerate(row):
                 if item in list(self.internal_colors.keys()):
